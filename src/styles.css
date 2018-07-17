@@ -1,1 +1,11 @@
 /* You can add global styles to this file, and also import other style files */
+
+mo-map{
+  display:block;
+  height:800px;
+  width:800px;
+}
+
+map-viewer {
+  display:block
+}
