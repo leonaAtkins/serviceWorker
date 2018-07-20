@@ -6,6 +6,10 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
 
 import {MoMapModule, LayerModule} from '@mo/map';
+import {Http, HttpModule} from "@angular/http";
+import {HttpClientModule} from "@angular/common/http";
+import {CapabilitiesService} from "./capabilities.service";
+import {FormsModule} from "@angular/forms";
 
 @NgModule({
   declarations: [
@@ -15,10 +19,13 @@ import {MoMapModule, LayerModule} from '@mo/map';
     BrowserModule,
     MoMapModule,
     LayerModule,
-    environment.production ? ServiceWorkerModule.register('ngsw-worker.js') : []
-    //ServiceWorkerModule.register('./ngsw-worker.js', { enabled: environment.production })
+    FormsModule,
+    HttpModule,
+    HttpClientModule,
+    //environment.production ? ServiceWorkerModule.register('ngsw-worker.js') : []
+    ServiceWorkerModule.register('ngsw-worker.js', { enabled: environment.production })
   ],
-  providers: [],
+  providers: [CapabilitiesService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

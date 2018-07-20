@@ -1,0 +1,11 @@
+{
+  "/public/data/": {
+   "target": "http://www.metoffice.gov.uk",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/public/data/(.*)": "/public/data/$1"
+    }
+  }
+}

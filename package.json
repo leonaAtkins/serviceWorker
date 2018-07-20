@@ -25,6 +25,7 @@
     "@angular/service-worker": "^6.0.3",
     "@mo/map": "^4.2.2",
     "core-js": "^2.5.4",
+    "ngx-xml2json": "^1.0.2",
     "rxjs": "^6.0.0",
     "zone.js": "^0.8.26"
   },
