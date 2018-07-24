@@ -89,6 +89,9 @@ export class AppComponent implements OnInit {
       .replace('{Z}','{z}'); //public
       //.replace('{key}',this.APIKEY); // datapoint
     //console.log(this.layerUrl);
+    if (typeof this.selectedLayer.service.Style !== 'undefined'){
+      this.layerUrl += '&'+encodeURI(this.selectedLayer.service.Style);
+    }
     this.currentLayer = L.tileLayer(this.layerUrl, {layerType:'WeatherLayer', layerName: layerTag});
     this.currentLayer.setOpacity(0);
     // datapoint
