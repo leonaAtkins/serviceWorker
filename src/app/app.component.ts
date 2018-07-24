@@ -1,6 +1,6 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
 import {SwUpdate} from '@angular/service-worker';
-
+import {delay } from 'rxjs/operators';
 import {interval} from "rxjs/index";
 import {MoMapDirective} from '@mo/map';
 import {Capabilities} from './capabilities';
@@ -55,11 +55,11 @@ export class AppComponent implements OnInit {
   private layerTimes;
   private a = 0;
   private currentLayer;
-  private previousLayer;
   private play = false;
   private animate;
   public layerName;
   public layerTime;
+  private loading = false;
   public playLabel = "Play |>";
   public weatherLayers = [];
   public selectedValue = 0;
@@ -75,33 +75,46 @@ export class AppComponent implements OnInit {
   }
 
   updateLayer(time){
-    this.previousLayer = this.currentLayer;
+    let previousLayer = this.currentLayer;
     let layerTag = this.layerName+'|'+time;
-    //this.layerUrl = https://www.metoffice.gov.uk/public/data/LayerCache/{Service}/ItemBbox/{LayerName}/{X}/{Y}/{Z}/{ImageFormat}?TIME={Time}Z&styles=
-    this.layerUrl = this.weatherLayers[this.selectedValue].url
-     .replace('{LayerName}',this.selectedLayer.service.LayerName)
-     .replace('{ImageFormat}',this.selectedLayer.service.ImageFormat)
-     .replace('{Time}',encodeURI(time))
-     .replace('{key}',this.APIKEY);
-      this.currentLayer = L.tileLayer(this.layerUrl, {layerType:'WeatherLayer', layerName: layerTag});
-      // datapoint
+    this.loading = true;
+    //this.layerUrl = this.weatherLayers[this.selectedValue].url
+    this.layerUrl = '//www.metoffice.gov.uk/public/data/LayerCache/{Service}/ItemBbox/{LayerName}/{X}/{Y}/{Z}/{ImageFormat}?TIME={Time}Z'
+      .replace('{LayerName}',this.selectedLayer.service.LayerName)
+      .replace('{Service}',this.selectedLayer.service['@attributes'].name) // public
+      .replace('{ImageFormat}','png8bit')
+      .replace('{Time}',encodeURI(time))
+      .replace('{X}','{x}') //public
+      .replace('{Y}','{y}') //public
+      .replace('{Z}','{z}'); //public
+      //.replace('{key}',this.APIKEY); // datapoint
+    //console.log(this.layerUrl);
+    this.currentLayer = L.tileLayer(this.layerUrl, {layerType:'WeatherLayer', layerName: layerTag});
+    this.currentLayer.setOpacity(0);
+    // datapoint
       //const bounds = [[49.6, -10.5], [59.2, 2.2]];
       //this.currentLayer = L.imageOverlay(this.layerUrl, bounds, {layerType:'WeatherLayer', layerName: layerTag});
       if (this.map.hasLayer(this.currentLayer)){
+        previousLayer.setOpacity(0);
         this.currentLayer.setOpacity(1);
       } else {
         this.map.addLayer(this.currentLayer, {layerName: layerTag});
         this.currentLayer.on("load",function(event) {
-          this._map.eachLayer(function(layer){
-            if (typeof layer.options.layerType !== 'undefined'){
-              if (layer.options.layerType === 'WeatherLayer' &&
-                event.target.options.layerName !== layer.options.layerName){
-                //console.log('layer :',layer.options.layerType, layer.options.layerName);
-                layer.setOpacity(0)
+          setTimeout( () => {
+            this._map.eachLayer(function (layer) {
+              if (typeof layer.options.layerType !== 'undefined') {
+                if (layer.options.layerType === 'WeatherLayer') {
+                  if (event.target.options.layerName === layer.options.layerName) {
+                    //console.log('layer :',layer.options.layerType, layer.options.layerName);
+                    layer.setOpacity(1)
+                  } else {
+                    layer.setOpacity(0)
+                  }
+                }
               }
-            }
-            //console.log(layer.options.layerType);
-          });
+              //console.log(layer.options.layerType);
+            })
+          }, 200);
         })
       }
       this.layerTime = time;
@@ -110,20 +123,46 @@ export class AppComponent implements OnInit {
 
   changeLayer(event){
     this.selectedValue = event.target.selectedIndex;
-    this.getTimes()
+    this.getTimes();
+    this.removeLayers();
   }
+
+  removeLayers(){
+    let map = this.map;
+    map.eachLayer(function(layer){
+      if (typeof layer.options.layerType !== 'undefined'){
+        if (layer.options.layerType === 'WeatherLayer') {
+          //layer.setOpacity(0)
+          map.removeLayer(layer);
+        }
+      }
+    });
+  }
+
+  hideLayers(){
+    let map = this.map;
+    map.eachLayer(function(layer){
+      if (typeof layer.options.layerType !== 'undefined'){
+        if (layer.options.layerType === 'WeatherLayer') {
+          layer.setOpacity(0)
+        }
+      }
+    });
+  }
+
 
   getTimes() {
       this.weatherLayers = [];
       this.capabilitiesService.getCapabilities()
         .subscribe(data => {
-          let parser = new DOMParser();
-          let xmlDoc = parser.parseFromString(data, 'text/xml');
-          let result:any = xmlDoc.getElementsByTagName('body');
-          // let result:Capabilities = data; // Data Point.
-          console.log('result: ', result);
+          //console.log('data', data);
+           let result:Capabilities = data; // Data Point.
+          //console.log('result: ', result);
           for(let l=0;l<result.Layers.Layer.length; l++ ){
-            this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@displayName'], service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl['$']});
+            //public
+            this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@attributes'].displayName, service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl});
+            // datapoint
+            //this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@displayName'], service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl['$']});
           }
           this.selectedLayer = this.weatherLayers[this.selectedValue];
           if (typeof this.selectedLayer.service.Times !== 'undefined')
@@ -164,7 +203,11 @@ export class AppComponent implements OnInit {
       this.play = true;
       this.playLabel = "Pause ||";
       this.animate = interval(1000).subscribe(() => {
-        this.nextStep();
+        if (this.currentLayer._loading){
+          console.log('still loading wait.')
+        } else {
+          this.nextStep();
+        }
       });
     }
   }
