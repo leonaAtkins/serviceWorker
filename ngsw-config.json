@@ -42,7 +42,7 @@
   "dataGroups": [{
     "name": "mapLayers",
     "urls": [
-      "https://www.metoffice.gov.uk/public/data/LayerCache/OBSERVATIONS/ItemBbox/*",
+      "https://wwwpre.metoffice.gov.uk/public/data/LayerCache/OBSERVATIONS/ItemBbox/*",
       "https://a.tile.openstreetmap.org/6/*/*.png"
     ],
     "cacheConfig": {
