@@ -4,6 +4,7 @@ import {interval} from "rxjs/index";
 import {MoMapDirective} from '@mo/map';
 import {Capabilities} from './capabilities';
 import {CapabilitiesService} from "./capabilities.service";
+import { MatSnackBar } from '@angular/material';
 
 declare const L: any;
 
@@ -15,6 +16,7 @@ declare const L: any;
 export class AppComponent implements OnInit {
 
   constructor(
+    private snackbar: MatSnackBar,
     private updates: SwUpdate,
     private capabilitiesService: CapabilitiesService,
   ) {}
@@ -28,7 +30,15 @@ export class AppComponent implements OnInit {
     this.updates.available.subscribe(event => {
       console.log('current version is', event.current);
       console.log('available version is', event.available);
+      console.log('Update Detected, reloading capabilities');
+      this.getTimes();
       this.setUpdateFlag('Update available');
+      const bar = this.snackbar.open('Updates available.', 'Reload?');
+      bar
+        .onAction()
+        .subscribe(() =>{
+          window.location.reload();
+      });
     });
     this.updates.activated.subscribe(event => {
       console.log('old version was', event.previous);
@@ -181,8 +191,12 @@ export class AppComponent implements OnInit {
    * Get layer times.
    */
   getTimes() {
-      this.weatherLayers = [];
-      this.capabilitiesService.getCapabilities()
+    let wasPlaying = this.play;
+    if (this.play) {
+      this.playStop();
+    }
+    this.weatherLayers = [];
+    this.capabilitiesService.getCapabilities()
         .subscribe(data => {
            let result:Capabilities = data; // Data Point.
           for(let l=0;l<result.Layers.Layer.length; l++ ){
@@ -197,6 +211,9 @@ export class AppComponent implements OnInit {
             this.layerName = this.selectedLayer.service.LayerName;
             this.layerTimes = this.selectedLayer.service.Times.Time.reverse();
             this.updateLayer(this.layerTimes[0]);
+            if (wasPlaying) {
+              this.playStop();
+            }
           } else {
             console.error('Pubic feed has no times, AGAIN!');
           }

@@ -34,8 +34,7 @@
     "updateMode": "prefetch",
     "resources": {
       "files": [
-        "/assets/**",
-        "/assets/**/*"
+        "/assets/icons/*"
       ]
     }
   }],
@@ -51,5 +50,18 @@
       "timeout": "1m",
       "strategy": "performance"
     }
-  }]
+  },
+    {
+      "name": "capabilities",
+      "urls": [
+        "/assets/data/*",
+        "http://wwwpre.metoffice.gov.uk/public/data/LayerCache/GetCapabilities/Item/*"
+      ],
+      "cacheConfig": {
+        "maxSize": 5,
+        "maxAge": "5m",
+        "timeout": "10s",
+        "strategy": "freshness"
+      }
+    }]
 }
