@@ -28,31 +28,38 @@ export class AppComponent implements OnInit {
    */
   ngOnInit() {
     this.updates.available.subscribe(event => {
-      console.log('current version is', event.current);
-      console.log('available version is', event.available);
-      console.log('Update Detected, reloading capabilities');
+      console.info('current version is', event.current);
+      console.info('available version is', event.available);
+      console.info('Update Detected, reloading capabilities');
       this.getTimes();
       this.setUpdateFlag('Update available');
-      const bar = this.snackbar.open('Updates available.', 'Reload?');
-      bar
-        .onAction()
-        .subscribe(() =>{
-          window.location.reload();
-      });
+      this.showUpdateBar();
     });
     this.updates.activated.subscribe(event => {
-      console.log('old version was', event.previous);
-      console.log('new version is', event.current);
+      console.info('old version was', event.previous);
+      console.info('new version is', event.current);
       this.setUpdateFlag('New version available');
     });
-    interval(30 * 1000).subscribe(() => {
+    if (this.updates.isEnabled) {
+      interval(30 * 1000).subscribe(() => {
         this.updates.checkForUpdate();
         this.updateOnlineStatus();
-    });
+        console.info('checking for updates ',new Date().toTimeString());
+      });
+    }
     interval(5 * 60 * 1000).subscribe(() => {
       this.getTimes();
     });
   }
+
+  showUpdateBar(){
+    const bar = this.snackbar.open('Updates available.', 'Reload?');
+    bar
+      .onAction()
+      .subscribe(() =>{
+        window.location.reload();
+      });
+  };
 
   /**
    * hock to load map once on view
@@ -77,7 +84,13 @@ export class AppComponent implements OnInit {
   private loading = false;
   public playLabel = "Play |>";
   public weatherLayers = [];
+  public weatherPeriods = [
+    {'id': 0, 'name': 'Observation'},
+    {'id': 1, 'name': 'Forecast'}
+  ];
   public selectedValue = 0;
+  public selectedPeriodIndex = 0;
+  public selectedPeriod = 'Observation';
   private selectedLayer:any = {};
   private APIKEY = 'c70d5f37-796a-47a8-82a2-9207849f6625&cb=';
 
@@ -101,24 +114,67 @@ export class AppComponent implements OnInit {
    * @param time
    */
   updateLayer(time){
+    let layerTag;
     let previousLayer = this.currentLayer;
-    let layerTag = this.layerName+'|'+time;
+    let layerTime;
     let style = "";
-    if (typeof this.selectedLayer.service.Style !== 'undefined'){
-      style = this.selectedLayer.service.Style;
-    }
     this.loading = true;
-    this.layerUrl = "//"+this.weatherLayers[this.selectedValue].url.split('://')[1]
-    //this.layerUrl = '//www.metoffice.gov.uk/public/data/LayerCache/{Service}/ItemBbox/{LayerName}/{X}/{Y}/{Z}/{ImageFormat}?TIME={Time}Z'
-      .replace('{LayerName}',this.selectedLayer.service.LayerName)
-      .replace('{Service}',this.selectedLayer.service['@attributes'].name) // public
-      .replace('{ImageFormat}','png8bit')
-      .replace('{Time}',encodeURI(time))
-      .replace('{X}','{x}') //public
-      .replace('{Y}','{y}') //public
-      .replace('{Z}','{z}') //public
-      .replace('chosenstyle',style);
-    //.replace('{key}',this.APIKEY); // datapoint
+    if (this.selectedPeriod === 'Forecast'){
+      let currentService:any = {};
+      if (Array.isArray(this.selectedLayer.service)) {
+        for (let service of this.selectedLayer.service) {
+          for (let times of service.Timesteps.Timestep) {
+            if (times === time) {
+              currentService = service;
+              break;
+            }
+          }
+        }
+      } else {
+        currentService = this.selectedLayer.service;
+      }
+      if (typeof currentService.Style !== 'undefined') {
+        style = currentService.Style;
+      }
+      this.layerName = currentService.LayerName;
+      this.layerUrl = "//" + this.weatherLayers[this.selectedValue].url.split('://')[1]
+          //         http://wwwpre.metoffice.gov.uk/public/data/LayerCache/{Service}/ItemBbox/{LayerName}/{X}/{Y}/{Z}/{ImageFormat}?RUN={DefaultTime}Z&FORECAST=%2B{Timestep}&styles=chosenstyle
+          //this.layerUrl = '//www.metoffice.gov.uk/public/data/LayerCache/{Service}/ItemBbox/{LayerName}/{X}/{Y}/{Z}/{ImageFormat}?TIME={Time}Z'
+          .replace('{LayerName}', currentService.LayerName)
+          .replace('{Service}', currentService['@attributes'].name) // public
+          .replace('{ImageFormat}', 'png8bit')
+          .replace('{DefaultTime}', currentService.Timesteps['@attributes'].defaultTime)
+          .replace('{Timestep}', encodeURI(time))
+          .replace('{X}', '{x}') //public
+          .replace('{Y}', '{y}') //public
+          .replace('{Z}', '{z}') //public
+          .replace('chosenstyle', style);
+      //.replace('{key}',this.APIKEY); // datapoint
+      layerTime = new Date(currentService.Timesteps['@attributes'].defaultTime+"Z");
+      layerTime = new Date(layerTime.toUTCString());
+      layerTime.setTime(layerTime.getTime() + (time*60*60*1000));
+      //layerTime.setHours(layerTime.getHours() + time);
+      layerTime = layerTime.toISOString().split('.000')[0];
+      layerTag = currentService.LayerName + '|' + layerTime;
+    } else {
+      // obs!
+      layerTag = this.layerName+'|'+time;
+      if (typeof this.selectedLayer.service.Style !== 'undefined'){
+        style = this.selectedLayer.service.Style;
+      }
+      this.layerUrl = "//" + this.weatherLayers[this.selectedValue].url.split('://')[1]
+        //this.layerUrl = '//www.metoffice.gov.uk/public/data/LayerCache/{Service}/ItemBbox/{LayerName}/{X}/{Y}/{Z}/{ImageFormat}?TIME={Time}Z'
+          .replace('{LayerName}', this.selectedLayer.service.LayerName)
+          .replace('{Service}', this.selectedLayer.service['@attributes'].name) // public
+          .replace('{ImageFormat}', 'png8bit')
+          .replace('{Time}', encodeURI(time))
+          .replace('{X}', '{x}') //public
+          .replace('{Y}', '{y}') //public
+          .replace('{Z}', '{z}') //public
+          .replace('chosenstyle', style);
+      //.replace('{key}',this.APIKEY); // datapoint
+      layerTime = time;
+    }
     this.currentLayer = L.tileLayer(this.layerUrl, {layerType:'WeatherLayer', layerName: layerTag});
     this.currentLayer.setOpacity(0);
     // datapoint
@@ -128,15 +184,20 @@ export class AppComponent implements OnInit {
         previousLayer.setOpacity(0);
         this.currentLayer.setOpacity(1);
       } else {
+        let regionLayer;
         this.map.addLayer(this.currentLayer, {layerName: layerTag});
         this.currentLayer.on("load",function(event) {
           // add delay as load event premature.
           setTimeout( () => {
             this._map.eachLayer(function (layer) {
+              if (layer._url.indexOf('regions') > -1){
+                regionLayer = layer;
+              }
               if (typeof layer.options.layerType !== 'undefined') {
                 if (layer.options.layerType === 'WeatherLayer') {
                   if (event.target.options.layerName === layer.options.layerName) {
-                    layer.setOpacity(1)
+                    layer.setOpacity(1);
+                    regionLayer.bringToFront();
                   } else {
                     layer.setOpacity(0)
                   }
@@ -146,7 +207,7 @@ export class AppComponent implements OnInit {
           }, 200);
         })
       }
-      this.layerTime = time;
+      this.layerTime = layerTime;
   }
 
   /**
@@ -155,6 +216,13 @@ export class AppComponent implements OnInit {
    */
   changeLayer(event){
     this.selectedValue = event.target.selectedIndex;
+    this.getTimes();
+    this.removeLayers();
+  }
+
+  changePeriod(){
+    this.selectedPeriod = this.weatherPeriods[this.selectedPeriodIndex].name;
+    this.weatherLayers = [];
     this.getTimes();
     this.removeLayers();
   }
@@ -196,28 +264,66 @@ export class AppComponent implements OnInit {
       this.playStop();
     }
     this.weatherLayers = [];
-    this.capabilitiesService.getCapabilities()
+    this.capabilitiesService.getCapabilities(this.selectedPeriod)
         .subscribe(data => {
-           let result:Capabilities = data; // Data Point.
-          for(let l=0;l<result.Layers.Layer.length; l++ ){
-            // public/pre
-            this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@attributes'].displayName, service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl});
-            // datapoint
-            //this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@displayName'], service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl['$']});
-          }
-          this.selectedLayer = this.weatherLayers[this.selectedValue];
-          if (typeof this.selectedLayer.service.Times !== 'undefined')
-          {
-            this.layerName = this.selectedLayer.service.LayerName;
-            this.layerTimes = this.selectedLayer.service.Times.Time.reverse();
-            this.updateLayer(this.layerTimes[0]);
-            if (wasPlaying) {
-              this.playStop();
-            }
+          if (this.selectedPeriod === 'Forecast'){
+            this.processFcstTimes(data);
           } else {
-            console.error('Pubic feed has no times, AGAIN!');
+            this.processObsTimes(data);
           }
-        })
+        },(error) => {
+          console.error('Somethings gone wrong', error)
+        }, () =>{
+        if (wasPlaying) {
+          this.playStop();
+        }
+      })
+    }
+
+    processObsTimes(data){
+      let result:Capabilities = data; // Data Point.
+      for(let l=0;l<result.Layers.Layer.length; l++ ){
+        // public/pre
+         this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@attributes'].displayName, service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl});
+        // datapoint
+        //this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@displayName'], service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl['$']});
+      }
+      this.selectedLayer = this.weatherLayers[this.selectedValue];
+      if (typeof this.selectedLayer.service.Times !== 'undefined') {
+        this.layerTimes = this.selectedLayer.service.Times.Time.reverse();
+        this.layerName = this.selectedLayer.service.LayerName;
+        this.updateLayer(this.layerTimes[0]);
+      } else {
+        console.error('Pubic feed has no times, AGAIN!');
+      }
+    }
+
+    processFcstTimes(data){
+      let result:Capabilities = data; // Data Point.
+      this.layerTimes = [];
+      for(let l=0;l<result.Layers.Layer.length; l++ ){
+        // public/pre
+          this.weatherLayers.push({
+            id: l,
+            name: result.Layers.Layer[l]['@attributes'].displayName,
+            service: result.Layers.Layer[l].Service,
+            url: result.Layers.BaseUrl
+          });
+        // datapoint
+        //this.weatherLayers.push({id:l,name:result.Layers.Layer[l]['@displayName'], service:result.Layers.Layer[l].Service, url:result.Layers.BaseUrl['$']});
+      }
+      this.selectedLayer = this.weatherLayers[this.selectedValue];
+      if (this.selectedPeriod === 'Forecast'){
+        //this.layerName = this.selectedLayer.name;
+        if (Array.isArray(this.selectedLayer.service)){
+          let times = [];
+          for (let s = 0; s < this.selectedLayer.service.length; s++){
+            times = times.concat(this.selectedLayer.service[s].Timesteps.Timestep)
+          }
+          this.layerTimes = times;
+        }
+        this.updateLayer(this.layerTimes[0]);
+      }
     }
 
   /**
@@ -258,7 +364,7 @@ export class AppComponent implements OnInit {
       this.playLabel = "Pause ||";
       this.animate = interval(1000).subscribe(() => {
         if (this.currentLayer._loading){
-          console.log('still loading wait.')
+          console.warn('still loading previous layer so waiting.')
         } else {
           this.nextStep();
         }

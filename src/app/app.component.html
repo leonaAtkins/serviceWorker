@@ -1,17 +1,22 @@
 <!--The content below is only a placeholder and can be replaced.-->
 <div>
   <div align="center">
-  <H1>{{title}}</H1>
-  <P>Currently {{onlineFlag}} with {{updateFlag}} </P>
+    <h2>{{title}}</h2>
+    <span>Currently {{onlineFlag}} with {{updateFlag}} </span><br />
   <mo-map class="map">
     <tile-layer logging="true" [tiles]="'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'"></tile-layer>
+    <tile-layer logging="true" [tiles]="'https://wwwpre.metoffice.gov.uk/public/tiles/regions/{z}/{x}/{y}.png'"></tile-layer>
   </mo-map>
-    <button (click)="previousStep()">< Previous </button>
-    <button (click)="playStop()">{{playLabel}}</button>
-    <button (click)="nextStep()">Next > </button>
+    <select [(ngModel)]="selectedPeriodIndex" (change)="changePeriod($event)">
+      <option *ngFor="let p of weatherPeriods" [ngValue]="p.id">{{p.name}}</option>
+    </select>
     <select [(ngModel)]="selectedValue" (change)="changeLayer($event)">
       <option *ngFor="let c of weatherLayers" [ngValue]="c.id">{{c.name}}</option>
     </select>
-    <span><br/>{{ layerName }} : {{layerTime}}</span>
+    <br />
+    <button (click)="previousStep()">< Previous </button>
+    <button (click)="playStop()">{{playLabel}}</button>
+    <button (click)="nextStep()">Next > </button>
+    <br/><span>{{layerTime}}</span>
   </div>
 </div>

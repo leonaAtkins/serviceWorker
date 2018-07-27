@@ -8,7 +8,8 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "sw-build": "ng build --prod --base-href ./ && node ./fix-build-sw.js"
+    "sw-build": "ng build --prod --base-href ./ && node ./fix-build-sw.js",
+    "update-data": "curl http://wwwpre.metoffice.gov.uk/public/data/LayerCache/GetCapabilities/Item/Forecast > ./src/assets/data/Forecast.xml && curl http://wwwpre.metoffice.gov.uk/public/data/LayerCache/GetCapabilities/Item/Observation > ./src/assets/data/observation.xml"
   },
   "private": true,
   "dependencies": {

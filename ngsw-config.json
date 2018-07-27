@@ -42,7 +42,9 @@
     "name": "mapLayers",
     "urls": [
       "https://wwwpre.metoffice.gov.uk/public/data/LayerCache/OBSERVATIONS/ItemBbox/*",
-      "https://a.tile.openstreetmap.org/6/*/*.png"
+      "https://wwwpre.metoffice.gov.uk/public/data/LayerCache/UKPPNOW/ItemBbox/*",
+      "https://wwwpre.metoffice.gov.uk/public/data/LayerCache/UKPPBEST/ItemBbox/*",
+      "https://a.tile.openstreetmap.org/*"
     ],
     "cacheConfig": {
       "maxSize": 100,

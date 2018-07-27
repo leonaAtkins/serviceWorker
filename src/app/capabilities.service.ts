@@ -18,10 +18,10 @@ export class CapabilitiesService {
    * HTTP call to get the data.
    * @returns {Observable<any>}
    */
-  getCapabilities(): Observable<any> {
+  getCapabilities(period): Observable<any> {
     //let capabilitiesURL = '//wwwpre.metoffice.gov.uk/public/data/LayerCache/GetCapabilities/Item/Observation?cb=' + Math.floor(Math.random() * 100000000000000);
     //let capabilitiesURL = '//datapoint.metoffice.gov.uk/public/data/layer/wxobs/all/json/capabilities?key=c70d5f37-796a-47a8-82a2-9207849f6625&cb=' + Math.floor(Math.random() * 100000000000000);
-    let capabilitiesURL = '../assets/data/Observation.xml';
+    let capabilitiesURL = '../assets/data/'+period+'.xml';
     return this.http.get(capabilitiesURL, {responseType: 'text'})
       .pipe(
         map(res => {
