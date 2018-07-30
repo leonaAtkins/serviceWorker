@@ -33,7 +33,7 @@ export class AppComponent implements OnInit {
       console.info('Update Detected, reloading capabilities');
       this.getTimes();
       this.setUpdateFlag('Update available');
-      this.showUpdateBar();
+      this.showUpdateBar('Updates available.');
     });
     this.updates.activated.subscribe(event => {
       console.info('old version was', event.previous);
@@ -47,13 +47,10 @@ export class AppComponent implements OnInit {
         console.info('checking for updates ',new Date().toTimeString());
       });
     }
-    interval(5 * 60 * 1000).subscribe(() => {
-      this.getTimes();
-    });
   }
 
-  showUpdateBar(){
-    const bar = this.snackbar.open('Updates available.', 'Reload?');
+  showUpdateBar(msg){
+    const bar = this.snackbar.open(msg, 'Reload?');
     bar
       .onAction()
       .subscribe(() =>{
@@ -153,7 +150,6 @@ export class AppComponent implements OnInit {
       layerTime = new Date(currentService.Timesteps['@attributes'].defaultTime+"Z");
       layerTime = new Date(layerTime.toUTCString());
       layerTime.setTime(layerTime.getTime() + (time*60*60*1000));
-      //layerTime.setHours(layerTime.getHours() + time);
       layerTime = layerTime.toISOString().split('.000')[0];
       layerTag = currentService.LayerName + '|' + layerTime;
     } else {
@@ -180,33 +176,31 @@ export class AppComponent implements OnInit {
     // datapoint
       //const bounds = [[49.6, -10.5], [59.2, 2.2]];
       //this.currentLayer = L.imageOverlay(this.layerUrl, bounds, {layerType:'WeatherLayer', layerName: layerTag});
-      if (this.map.hasLayer(this.currentLayer)){
-        previousLayer.setOpacity(0);
-        this.currentLayer.setOpacity(1);
-      } else {
-        let regionLayer;
-        this.map.addLayer(this.currentLayer, {layerName: layerTag});
-        this.currentLayer.on("load",function(event) {
-          // add delay as load event premature.
-          setTimeout( () => {
-            this._map.eachLayer(function (layer) {
-              if (layer._url.indexOf('regions') > -1){
-                regionLayer = layer;
-              }
-              if (typeof layer.options.layerType !== 'undefined') {
-                if (layer.options.layerType === 'WeatherLayer') {
-                  if (event.target.options.layerName === layer.options.layerName) {
-                    layer.setOpacity(1);
-                    regionLayer.bringToFront();
-                  } else {
-                    layer.setOpacity(0)
-                  }
+      let regionLayer;
+      this.map.addLayer(this.currentLayer, {layerName: layerTag});
+      this.currentLayer.on("load",function(event) {
+        // add delay as load event premature.
+        setTimeout( () => {
+          this._map.eachLayer(function (layer) {
+            if (layer._url.indexOf('regions') > -1){
+              regionLayer = layer;
+            }
+            if (typeof layer.options.layerType !== 'undefined') {
+              if (layer.options.layerType === 'WeatherLayer') {
+                if (event.target.options.layerName === layer.options.layerName) {
+                  layer.setOpacity(1);
+                  regionLayer.bringToFront();
+                } else {
+                  layer.setOpacity(0)
                 }
               }
-            })
-          }, 200);
-        })
-      }
+            }
+          });
+          if (typeof previousLayer !== 'undefined') {
+            this._map.removeLayer(previousLayer);
+          }
+        }, 200);
+      });
       this.layerTime = layerTime;
   }
 
@@ -272,6 +266,8 @@ export class AppComponent implements OnInit {
             this.processObsTimes(data);
           }
         },(error) => {
+          wasPlaying = false;
+          this.showUpdateBar('Somethings gone wrong.');
           console.error('Somethings gone wrong', error)
         }, () =>{
         if (wasPlaying) {

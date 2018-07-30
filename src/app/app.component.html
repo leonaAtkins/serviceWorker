@@ -7,7 +7,7 @@
     <tile-layer logging="true" [tiles]="'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'"></tile-layer>
     <tile-layer logging="true" [tiles]="'https://wwwpre.metoffice.gov.uk/public/tiles/regions/{z}/{x}/{y}.png'"></tile-layer>
   </mo-map>
-    <select [(ngModel)]="selectedPeriodIndex" (change)="changePeriod($event)">
+    <select [(ngModel)]="selectedPeriodIndex" (change)="changePeriod()">
       <option *ngFor="let p of weatherPeriods" [ngValue]="p.id">{{p.name}}</option>
     </select>
     <select [(ngModel)]="selectedValue" (change)="changeLayer($event)">
